@@ -4,8 +4,6 @@ FireWatch AI is an **AI-ready wildfire monitoring and decision-support web appli
 
 The platform brings together **geospatial visualization**, **risk scoring**, **alert management**, and **public safety resources** into a single modern dashboard.
 
-> ⚠️ This project currently uses simulated and static datasets to demonstrate architecture, UX, and system design. It is built to integrate real satellite, environmental, and emergency data sources.
-
 ---
 
 ## 🌍 Live Demo
