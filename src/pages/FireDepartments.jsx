@@ -1,144 +1,121 @@
-import React, { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { apiClient } from '@/api/client';
-import { Phone, MapPin, Building2, Search, Loader2 } from 'lucide-react';
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import React, { useMemo, useState } from "react";
+
+const DATA = [
+  { province: "Alberta", name: "Calgary Fire Department", city: "Calgary, Alberta", emergency: "911", nonEmergency: "403-268-1010", tags: ["Emergency Response", "Fire Prevention", "Hazmat"] },
+  { province: "Alberta", name: "Edmonton Fire Rescue Services", city: "Edmonton, Alberta", emergency: "911", nonEmergency: "780-442-5000", tags: ["Emergency Response", "Fire Prevention"] },
+  { province: "British Columbia", name: "Vancouver Fire Rescue Services", city: "Vancouver, British Columbia", emergency: "911", nonEmergency: "604-665-6000", tags: ["Emergency Response", "Wildfire Support"] },
+  { province: "Manitoba", name: "Winnipeg Fire Paramedic Service", city: "Winnipeg, Manitoba", emergency: "911", nonEmergency: "204-986-6630", tags: ["Emergency Response", "Paramedic Services"] },
+  { province: "Ontario", name: "Toronto Fire Services", city: "Toronto, Ontario", emergency: "911", nonEmergency: "416-338-9050", tags: ["Emergency Response", "Fire Prevention", "Hazmat"] },
+  { province: "Ontario", name: "Ottawa Fire Services", city: "Ottawa, Ontario", emergency: "911", nonEmergency: "613-580-2857", tags: ["Emergency Response", "Wildfire Support"] },
+  { province: "Ontario", name: "Hamilton Fire Department", city: "Hamilton, Ontario", emergency: "911", nonEmergency: "905-546-4925", tags: ["Emergency Response"] },
+  { province: "Ontario", name: "London Fire Department", city: "London, Ontario", emergency: "911", nonEmergency: "519-661-2489", tags: ["Emergency Response"] },
+];
+
+// phone helper: keeps only digits for tel:
+const toTel = (s) => "tel:" + String(s).replace(/[^\d+]/g, "");
 
 export default function FireDepartments() {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedProvince, setSelectedProvince] = useState('all');
+  const [query, setQuery] = useState("");
+  const [province, setProvince] = useState("All Provinces");
 
-  const { data: departments = [], isLoading } = useQuery({
-    queryKey: ['fireDepartments'],
-    queryFn: () => apiClient.entities.FireDepartment.list('province', 100),
-  });
+  const provinces = useMemo(
+    () => ["All Provinces", ...Array.from(new Set(DATA.map((d) => d.province)))],
+    []
+  );
 
-  const provinces = ['all', ...new Set(departments.map(d => d.province))];
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return DATA.filter((d) => {
+      const matchesQ = !q || d.name.toLowerCase().includes(q) || d.city.toLowerCase().includes(q);
+      const matchesP = province === "All Provinces" || d.province === province;
+      return matchesQ && matchesP;
+    });
+  }, [query, province]);
 
-  const filteredDepartments = departments.filter(dept => {
-    const matchesSearch = dept.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         dept.city.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesProvince = selectedProvince === 'all' || dept.province === selectedProvince;
-    return matchesSearch && matchesProvince;
-  });
-
-  const groupedByProvince = filteredDepartments.reduce((acc, dept) => {
-    if (!acc[dept.province]) acc[dept.province] = [];
-    acc[dept.province].push(dept);
-    return acc;
-  }, {});
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <Loader2 className="w-8 h-8 animate-spin text-amber-500" />
-      </div>
-    );
-  }
+  const grouped = useMemo(() => {
+    const map = new Map();
+    for (const item of filtered) {
+      if (!map.has(item.province)) map.set(item.province, []);
+      map.get(item.province).push(item);
+    }
+    return Array.from(map.entries());
+  }, [filtered]);
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-white mb-2">Fire Departments</h1>
-        <p className="text-slate-400">Emergency contacts by province</p>
+        <h2 className="text-2xl font-semibold text-white">Fire Departments</h2>
+        <p className="text-slate-400 text-sm mt-1">Emergency contacts by province</p>
       </div>
 
-      {/* Filters */}
-      <div className="flex gap-4 flex-wrap">
-        <div className="flex-1 min-w-[200px]">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-500" />
-            <Input
-              placeholder="Search by name or city..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 bg-slate-800 border-white/10"
-            />
-          </div>
-        </div>
-        <Select value={selectedProvince} onValueChange={setSelectedProvince}>
-          <SelectTrigger className="w-[200px] bg-slate-800 border-white/10">
-            <SelectValue placeholder="All Provinces" />
-          </SelectTrigger>
-          <SelectContent>
-            {provinces.map(province => (
-              <SelectItem key={province} value={province}>
-                {province === 'all' ? 'All Provinces' : province}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+      <div className="flex flex-col md:flex-row gap-3">
+        <input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search by name or city..."
+          className="flex-1 px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-white outline-none"
+        />
 
-      {/* Departments by Province */}
-      {Object.keys(groupedByProvince).length === 0 ? (
-        <Card className="bg-slate-800/50 border-white/10">
-          <CardContent className="py-12 text-center">
-            <p className="text-slate-400">No fire departments found</p>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="space-y-6">
-          {Object.entries(groupedByProvince).map(([province, depts]) => (
-            <div key={province}>
-              <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
-                <Building2 className="w-5 h-5 text-amber-500" />
-                {province}
-              </h2>
-              <div className="grid gap-4 sm:grid-cols-2">
-                {depts.map((dept) => (
-                  <Card key={dept.id} className="bg-slate-800/50 border-white/10 hover:border-amber-500/30 transition-all">
-                    <CardHeader>
-                      <CardTitle className="text-white text-lg">{dept.name}</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                      <div className="flex items-start gap-2 text-sm">
-                        <MapPin className="w-4 h-4 text-slate-500 mt-0.5 flex-shrink-0" />
-                        <span className="text-slate-300">{dept.city}, {dept.province}</span>
-                      </div>
-                      
-                      {dept.emergency_line && (
-                        <a 
-                          href={`tel:${dept.emergency_line}`}
-                          className="flex items-center gap-2 p-3 bg-red-500/10 border border-red-500/20 rounded-lg hover:bg-red-500/20 transition-colors"
-                        >
-                          <Phone className="w-4 h-4 text-red-400" />
-                          <div className="flex-1">
-                            <div className="text-xs text-red-400 font-medium">EMERGENCY</div>
-                            <div className="text-sm text-white font-semibold">{dept.emergency_line}</div>
-                          </div>
-                        </a>
-                      )}
-                      
-                      <a 
-                        href={`tel:${dept.phone}`}
-                        className="flex items-center gap-2 p-3 bg-slate-900/50 rounded-lg hover:bg-slate-900/70 transition-colors"
-                      >
-                        <Phone className="w-4 h-4 text-slate-400" />
-                        <div className="flex-1">
-                          <div className="text-xs text-slate-500">Non-Emergency</div>
-                          <div className="text-sm text-slate-200">{dept.phone}</div>
-                        </div>
-                      </a>
-
-                      {dept.services && dept.services.length > 0 && (
-                        <div className="flex flex-wrap gap-2 pt-2">
-                          {dept.services.map((service, idx) => (
-                            <span key={idx} className="text-xs px-2 py-1 bg-amber-500/10 text-amber-400 rounded">
-                              {service}
-                            </span>
-                          ))}
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            </div>
+        <select
+          value={province}
+          onChange={(e) => setProvince(e.target.value)}
+          className="px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-white"
+        >
+          {provinces.map((p) => (
+            <option key={p} value={p} className="bg-slate-900 text-white">
+              {p}
+            </option>
           ))}
+        </select>
+      </div>
+
+      {grouped.length === 0 ? (
+        <div className="rounded-2xl bg-white/5 border border-white/10 p-10 text-center">
+          <div className="text-white font-semibold">No results</div>
+          <div className="text-slate-400 text-sm mt-1">Try a different search or select “All Provinces”.</div>
         </div>
+      ) : (
+        grouped.map(([prov, items]) => (
+          <div key={prov} className="space-y-3">
+            <div className="text-lg font-semibold text-amber-300">{prov}</div>
+
+            <div className="grid md:grid-cols-2 gap-4">
+              {items.map((d) => (
+                <div key={d.name} className="rounded-2xl bg-white/5 border border-white/10 p-5">
+                  <div className="text-sm font-semibold text-white">{d.name}</div>
+                  <div className="text-xs text-slate-400 mt-2">📍 {d.city}</div>
+
+                  <a
+                    href="tel:911"
+                    className="mt-4 rounded-xl bg-red-500/10 border border-red-500/20 p-3 flex items-center justify-between hover:bg-red-500/15 transition"
+                  >
+                    <div className="text-xs text-red-300">EMERGENCY</div>
+                    <div className="text-red-200 font-semibold">{d.emergency}</div>
+                  </a>
+
+                  <div className="mt-3 text-sm text-slate-200">☎ Non-Emergency</div>
+                  <a
+                    href={toTel(d.nonEmergency)}
+                    className="text-slate-300 text-sm hover:text-white underline decoration-white/20 hover:decoration-white/50"
+                  >
+                    {d.nonEmergency}
+                  </a>
+
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    {d.tags.map((t) => (
+                      <span
+                        key={t}
+                        className="text-[10px] px-2 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-300"
+                      >
+                        {t}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))
       )}
     </div>
   );
