@@ -1,8 +1,3 @@
-Absolutely — here is a **clean, professional, recruiter-ready `README.md`** you can copy-paste directly into your GitHub repo.
-It’s written to work for **LinkedIn viewers, hiring managers, GovTech, IBM, Google, and public-sector reviewers**.
-
----
-
 # 🔥 FireWatch AI — Wildfire Early Threat Radar (Canada)
 
 FireWatch AI is an **AI-ready wildfire monitoring and decision-support web application** designed to improve early awareness, preparedness, and emergency coordination across Canada.
