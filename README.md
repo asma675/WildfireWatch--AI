@@ -148,8 +148,8 @@ npm run preview
 ## 👩‍💻 Author
 
 **Asma Ahmed**
-AI / Data / Cloud Enthusiast
-📍 Canada
+* AI / Data / Cloud Enthusiast
+* 📍 Canada
 
 🔗 GitHub: [https://github.com/asma675](https://github.com/asma675)
 
